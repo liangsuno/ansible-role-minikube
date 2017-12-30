@@ -1,0 +1,59 @@
+---
+# tasks file for ansible-role-minikube
+
+- debug: var=ansible_python
+
+- set_fact:
+    download_url: "https://storage.googleapis.com/minikube/releases/v{{ minikube_version }}/minikube-linux-amd64"
+    download_path: "/tmp/minikube"
+    install_folder: "{{ install_folder }}"
+    install_path: "{{ install_folder }}/minikube"
+
+- name: Download kubectl
+  get_url:
+    url: "{{ download_url }}"
+    dest: "{{ download_path }}"
+    validate_certs: no
+
+- stat:
+    path: "{{ install_path }}"
+    checksum_algorithm: sha256
+  register: existing_file
+
+- stat:
+    path: "{{ download_path }}"
+    checksum_algorithm: sha256
+  register: downloaded_file
+
+- name: Set force_install to False if {{ install_path }} match checksum
+  set_fact:
+    force_install: "{{ existing_file.stat.checksum != downloaded_file.stat.checksum }}"
+  when: existing_file.stat.exists == True
+
+- name: Set force_install to True if {{ install_path }} does not exist
+  set_fact:
+    force_install: True
+  when: existing_file.stat.exists == False
+
+- debug:
+    msg: "Calculated checksum for {{ install_path }} is {{ existing_file.stat.checksum }}"
+  when: existing_file.stat.exists == True
+
+- debug:
+    msg: "Force install is True. Overwriting {{ install_path }}"
+  when: force_install == True
+
+- debug:
+    msg: "Force install is False. NOT overwriting {{ install_path }}"
+  when: force_install == False
+
+- name: copy executable to /usr/local/bin
+  become: yes
+  copy:
+    src: "{{ download_path }}"
+    dest: "{{ install_path }}"
+    remote_src: True
+    owner: root
+    group: root
+    mode: 0755
+  when: force_install == True
