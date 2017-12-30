@@ -10,4 +10,4 @@
     mkdir $HOME/.kube || true
     touch $HOME/.kube/config
     export KUBECONFIG=$HOME/.kube/config
-    sudo -E ./minikube start --vm-driver=none
+    sudo -E {{ install_folder }}/minikube start --vm-driver=none
